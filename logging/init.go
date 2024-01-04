@@ -2,15 +2,30 @@ package logging
 
 import (
 	"fmt"
-	"os"
-
 	log "github.com/sirupsen/logrus"
+	"os"
+	"strings"
 )
 
 var _cache map[string]*Logger
 
+var sensitive = []string{
+	"token",
+	"password",
+	"secret",
+}
+
+func isKeySensitive(key string) bool {
+	for _, sf := range sensitive {
+		if strings.Contains(key, sf) {
+			return true
+		}
+	}
+	return false
+}
+
 func init() {
-  log.SetFormatter(&log.JSONFormatter{})
+	log.SetFormatter(&log.JSONFormatter{})
 	log.SetOutput(os.Stdout)
 	log.SetLevel(logLevel())
 	_cache = make(map[string]*Logger, 0)
@@ -18,7 +33,7 @@ func init() {
 
 func logLevel() log.Level {
 	var logLevel log.Level
-  lgLevel := os.Getenv("LOG_LEVEL")
+	lgLevel := os.Getenv("LOG_LEVEL")
 
 	switch lgLevel {
 	case "debug":
@@ -62,13 +77,25 @@ type LoggerTask struct {
 	_logger *log.Entry
 }
 
-func (task *LoggerTask) WithAttributes(data map[string]interface{}) *LoggerTask {
+func (task *LoggerTask) WithAttributes(dm map[string]interface{}) *LoggerTask {
+	data := make(map[string]interface{})
+	for k, v := range data {
+		if isKeySensitive(k) {
+			data[k] = "***"
+		} else {
+			data[k] = v
+		}
+	}
 	task._logger = task._logger.WithFields(data)
 	return task
 }
 
 func (task *LoggerTask) WithAttribute(key string, value interface{}) *LoggerTask {
-	task._logger = task._logger.WithField(key, value)
+	data := value
+	if !isKeySensitive(key) {
+		data = "***"
+	}
+	task._logger = task._logger.WithField(key, data)
 	return task
 }
 
@@ -112,5 +139,3 @@ func (task *LoggerTask) Fatalf(s string, args ...any) {
 func (task *LoggerTask) Fatal(err error) {
 	task._logger.Fatal("fatal error ", err.Error())
 }
-
-
