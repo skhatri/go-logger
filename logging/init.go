@@ -13,11 +13,14 @@ var sensitive = []string{
 	"token",
 	"password",
 	"secret",
+	"dob",
+	"birth",
 }
 
 func isKeySensitive(key string) bool {
+	subj := strings.ToLower(key)
 	for _, sf := range sensitive {
-		if strings.Contains(key, sf) {
+		if strings.Contains(subj, sf) {
 			return true
 		}
 	}
@@ -79,7 +82,7 @@ type LoggerTask struct {
 
 func (task *LoggerTask) WithAttributes(dm map[string]interface{}) *LoggerTask {
 	data := make(map[string]interface{})
-	for k, v := range data {
+	for k, v := range dm {
 		if isKeySensitive(k) {
 			data[k] = "***"
 		} else {
@@ -92,7 +95,7 @@ func (task *LoggerTask) WithAttributes(dm map[string]interface{}) *LoggerTask {
 
 func (task *LoggerTask) WithAttribute(key string, value interface{}) *LoggerTask {
 	data := value
-	if !isKeySensitive(key) {
+	if isKeySensitive(key) {
 		data = "***"
 	}
 	task._logger = task._logger.WithField(key, data)
